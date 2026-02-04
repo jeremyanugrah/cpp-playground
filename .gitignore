@@ -1,0 +1,12 @@
+# Global
+.DS_Store
+
+# Python
+**/.venv/
+**/__pycache__/
+
+# C++
+**/*.o
+**/*.out
+**/app
+**/main
