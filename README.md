@@ -6,6 +6,7 @@ This environment runs inside a **Debian 12 (Bookworm)** container on a **Lenovo 
 **🛠️ Environment & Tools**  
 - Hardware: Lenovo S340 (Intel Celeron N4000, 4GB RAM)  
 - OS: ChromeOS + Linux Container (Crostini)  
+- Shell: Zsh (vanilla, no Oh My Zsh) in Foot terminal  
 - Editor: Neovim (v0.9+) with LSP, Treesitter, Telescope  
 - Languages: C++ (GCC/G++ + clangd), Python 3.11  
 
@@ -63,7 +64,11 @@ sudo apt install ripgrep -y
 # 8. Install Foot terminal (lightweight, native Wayland, Nerd Font support)
 sudo apt install foot -y
 
-# 9. Install a Nerd Font for icons (JetBrains Mono)
+# 9. Install Zsh (fast, lightweight shell — replaces Bash)
+sudo apt install zsh -y
+sudo chsh -s $(which zsh) $USER
+
+# 10. Install a Nerd Font for icons (JetBrains Mono)
 mkdir -p ~/.local/share/fonts
 cd ~/.local/share/fonts
 curl -fLO https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
@@ -440,7 +445,7 @@ TEXT EDITING
 
 ---
 
-## �️ Foot Terminal Setup
+## 🖥️ Foot Terminal Setup
 
 Foot is a lightweight, native Wayland terminal — perfect for low-spec Chromebooks. It renders faster than the default Crostini terminal and supports Nerd Fonts out of the box.
 
@@ -451,54 +456,122 @@ mkdir -p ~/.config/foot
 nvim ~/.config/foot/foot.ini
 ```
 
-Paste this configuration:
-
 ```ini
-# ~/.config/foot/foot.ini
-
 [main]
+shell=/usr/bin/zsh
 font=JetBrainsMono Nerd Font:size=11
-pad=10x10
+pad=20x20                       # Adds breathing room
+selection-target=both           # Syncs Primary and Clipboard buffers
 
 [colors]
-alpha=0.90
-background=1a1b26
-foreground=c0caf5
+alpha=0.90                      # 90% Opacity
+background=1a1b26               # Tokyo Night Background
+foreground=c0caf5               # Tokyo Night Text
 
-## Normal Colors (Tokyo Night)
-regular0=15161e
-regular1=f7768e
-regular2=9ece6a
-regular3=e0af68
-regular4=7aa2f7
-regular5=bb9af7
-regular6=7dcfff
-regular7=a9b1d6
+## Normal/Regular Colors
+regular0=15161e  # black
+regular1=f7768e  # red
+regular2=9ece6a  # green
+regular3=e0af68  # yellow
+regular4=7aa2f7  # blue
+regular5=bb9af7  # magenta
+regular6=7dcfff  # cyan
+regular7=a9b1d6  # white
 
 ## Bright Colors
-bright0=414868
-bright1=f7768e
-bright2=9ece6a
-bright3=e0af68
-bright4=7aa2f7
-bright5=bb9af7
-bright6=7dcfff
-bright7=c0caf5
+bright0=414868   # bright black
+bright1=f7768e   # bright red
+bright2=9ece6a   # bright green
+bright3=e0af68   # bright yellow
+bright4=7aa2f7   # bright blue
+bright5=bb9af7   # bright magenta
+bright6=7dcfff   # bright cyan
+bright7=c0caf5   # bright white
+
+[key-bindings]
+# Alt+v allows pasting without ChromeOS interference
+clipboard-paste=Mod1+v
+primary-paste=Shift+Insert
 ```
 
 Launch Foot from the ChromeOS Launcher (Search Key → type "foot"), then pin it to your shelf.
 
 ---
 
-## �🚀 Workflow Guide
+## 🐚 Zsh Setup
+
+Vanilla Zsh (no Oh My Zsh) for speed on low-end hardware. Custom prompt with Git branch, exit status icons, and timestamps.
+
+### Zsh Config (`~/.zshrc`)
+
+```bash
+nvim ~/.zshrc
+```
+
+```bash
+# 1. Environment Variables
+export WAYLAND_DISPLAY=wayland-0
+
+# 2. Colors & Modules
+autoload -U colors && colors
+autoload -Uz vcs_info
+
+# 3. Prompt Setup (Left Side)
+# Displays: (git-branch) user@host ~/dir %
+precmd() { vcs_info }
+zstyle ':vcs_info:git:*' formats '(%{$fg[yellow]%}%b%{$reset_color%}) '
+PROMPT="%{$fg[cyan]%}%n%{$reset_color%}%{$fg[white]%}@%m %{$fg[blue]%}%~%{$reset_color%} "
+PROMPT='${vcs_info_msg_0_}'$PROMPT
+PROMPT=$PROMPT'%# '
+
+# 4. Right Prompt (Right Side)
+# Displays: Check/Cross icon + HH:MM:SS timestamp
+RPROMPT="%(?.%{$fg[green]%}󰄬.%{$fg[red]%}󰅖) %{$fg[white]%}%D{%H:%M:%S}%{$reset_color%}"
+
+# 5. History Settings
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt append_history
+setopt share_history
+setopt inc_append_history
+setopt hist_ignore_all_dups
+
+# 6. Clipboard Fixes
+# Runs on startup to wake the Wayland bridge
+wl-paste > /dev/null 2>&1 &
+alias fixclip='wl-paste > /dev/null'
+```
+
+---
+
+## 📋 Clipboard Solution
+
+ChromeOS intercepts `Ctrl+Shift+V` and the Wayland bridge (Sommelier) goes to sleep between sessions.
+
+| Problem | Fix |
+|---------|-----|
+| ChromeOS steals `Ctrl+Shift+V` | Remapped paste to `Alt+v` in `foot.ini` |
+| Wayland bridge sleeps | `wl-paste` runs on Zsh startup to force handshake |
+| Manual fix if broken | Run `fixclip` alias in terminal |
+
+#### Required tool
+
+```bash
+sudo apt install wl-clipboard -y
+```
+
+---
+
+## 🚀 Workflow Guide
 
 ### C++ Development
 
 ```
 1. cd cpp-playground/project-name && nvim main.cpp
 2. Space+r → compiles & runs
-3. Edit → mouse select → y (copy) → Ctrl+Shift+V in Chrome
-4. Copy from Chrome → p in Neovim
+3. Edit → mouse select → y (copy) → Alt+v to paste in Foot
+4. Copy from Chrome → Alt+v in Foot → p in Neovim
 5. Delete wrong lines → mouse select → d
 6. Oops → u (undo)
 7. Done → :wqa
