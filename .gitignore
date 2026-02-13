@@ -1,12 +1,31 @@
-# Global
+# === OS ===
 .DS_Store
+Thumbs.db
+Desktop.ini
 
-# Python
+# === Editors / IDEs ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Python ===
 **/.venv/
 **/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
 
-# C++
+# === C++ ===
 **/*.o
 **/*.out
+**/*.exe
+**/*.a
+**/*.so
+**/*.dll
 **/app
 **/main
+**/build/
