@@ -59,6 +59,18 @@ sudo apt install wl-clipboard -y
 
 # 7. Install ripgrep (needed by Telescope live grep)
 sudo apt install ripgrep -y
+
+# 8. Install Foot terminal (lightweight, native Wayland, Nerd Font support)
+sudo apt install foot -y
+
+# 9. Install a Nerd Font for icons (JetBrains Mono)
+mkdir -p ~/.local/share/fonts
+cd ~/.local/share/fonts
+curl -fLO https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
+tar -xf JetBrainsMono.tar.xz
+rm JetBrainsMono.tar.xz
+fc-cache -fv
+cd -
 ```
 
 <details>
@@ -123,8 +135,37 @@ vim.opt.rtp:prepend(lazypath)
 -- 3. PLUGINS
 --------------------------------------------------------------------------------
 require("lazy").setup({
+    -- THEME
     { "folke/tokyonight.nvim", lazy = false, priority = 1000, config = function() vim.cmd.colorscheme("tokyonight-night") end },
-    { "nvim-lualine/lualine.nvim", dependencies = { "nvim-tree/nvim-web-devicons" }, config = function() require("lualine").setup({ options = { theme = "tokyonight" } }) end },
+    
+    -- STATUS BAR (ICONS ENABLED)
+    { 
+        "nvim-lualine/lualine.nvim", 
+        dependencies = { "nvim-tree/nvim-web-devicons" }, 
+        config = function() 
+            require("lualine").setup({ 
+                options = { 
+                    theme = "tokyonight",
+                    -- These are the "Powerline" symbols you wanted
+                    component_separators = { left = '', right = ''},
+                    section_separators = { left = '', right = ''},
+                    disabled_filetypes = { 'dapui_scopes', 'dapui_breakpoints', 'dapui_stacks', 'dapui_watches' },
+                } 
+            }) 
+        end 
+    },
+
+    -- FILE TREE (ICONS ENABLED)
+    { 
+        "nvim-neo-tree/neo-tree.nvim", 
+        branch = "v3.x", 
+        dependencies = { "nvim-lua/plenary.nvim", "nvim-tree/nvim-web-devicons", "MunifTanjim/nui.nvim" }, 
+        config = function()
+            -- Defaults automatically use the cool folder/file icons
+            vim.keymap.set('n', '<leader>t', ':Neotree toggle<CR>', { silent = true })
+        end 
+    },
+
     {
         "nvim-treesitter/nvim-treesitter",
         build = ":TSUpdate",
@@ -196,11 +237,11 @@ require("lazy").setup({
             format_on_save = { timeout_ms = 500, lsp_format = "fallback" },
         })
     end },
-    { "nvim-neo-tree/neo-tree.nvim", branch = "v3.x", dependencies = { "nvim-lua/plenary.nvim", "nvim-tree/nvim-web-devicons", "MunifTanjim/nui.nvim" }, config = function()
-        vim.keymap.set('n', '<leader>t', ':Neotree toggle<CR>', { silent = true })
-    end },
+    
     { "windwp/nvim-autopairs", event = "InsertEnter", config = true },
     { "lewis6991/gitsigns.nvim", config = true },
+    
+    -- DEBUGGER (FIXED PATH)
     {
         "mfussenegger/nvim-dap",
         dependencies = { 
@@ -212,7 +253,6 @@ require("lazy").setup({
         config = function()
             local dap, dapui = require("dap"), require("dapui")
             require("mason").setup()
-
             dapui.setup({
                 layouts = {
                     {
@@ -233,15 +273,12 @@ require("lazy").setup({
                 },
             })
 
-            -- BRUTE FORCE ADAPTER PATH
+            -- Direct path to the debugger binary we verified
             local cmd = os.getenv("HOME") .. "/.local/share/nvim/mason/bin/codelldb"
             dap.adapters.codelldb = {
                 type = 'server',
                 port = "${port}",
-                executable = {
-                    command = cmd,
-                    args = {"--port", "${port}"},
-                }
+                executable = { command = cmd, args = {"--port", "${port}"} }
             }
 
             require('dap-python').setup('/home/mundo/.local/pipx/venvs/debugpy/bin/python')
@@ -253,11 +290,7 @@ require("lazy").setup({
                     request = "launch",
                     program = function()
                         local exe = vim.fn.getcwd() .. '/' .. vim.fn.expand('%:t:r')
-                        if vim.fn.executable(exe) == 1 then
-                            return exe
-                        else
-                            return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
-                        end
+                        return vim.fn.executable(exe) == 1 and exe or vim.fn.input('Path: ', vim.fn.getcwd() .. '/', 'file')
                     end,
                     cwd = '${workspaceFolder}',
                     stopOnEntry = false,
@@ -265,7 +298,6 @@ require("lazy").setup({
             }
             dap.configurations.c = dap.configurations.cpp
 
-            -- AUTO UI MANAGEMENT
             dap.listeners.before.attach.dapui_config = function() dapui.open() end
             dap.listeners.before.launch.dapui_config = function() dapui.open() end
             dap.listeners.before.event_terminated.dapui_config = function() dapui.close() end
@@ -281,15 +313,10 @@ require("lazy").setup({
 --------------------------------------------------------------------------------
 -- 4. CUSTOM KEYBINDINGS
 --------------------------------------------------------------------------------
-vim.keymap.set('n', '<leader>r', ':w<CR>:!g++ -g % -o %< && ./%<<CR>', { desc = "C++ Run (Debug Mode)" })
+vim.keymap.set('n', '<leader>r', ':w<CR>:!g++ -g % -o %< && ./%<<CR>', { desc = "C++ Run" })
 vim.keymap.set('n', '<leader>p', ':w<CR>:!python3 %<CR>', { desc = "Python Run" })
 vim.keymap.set('n', '<Esc>', ':nohlsearch<CR>', { silent = true })
-
--- DEBUG QUIT: Kills process and closes UI
-vim.keymap.set('n', '<leader>dq', function() 
-    require("dap").terminate()
-    require("dapui").close() 
-end, { desc = "Debug Quit" })
+vim.keymap.set('n', '<leader>dq', function() require("dap").terminate() require("dapui").close() end, { desc = "Debug Quit" })
 ```
 
 **Apply**: Back up your old config, then save this to `~/.config/nvim/init.lua`.  
@@ -301,7 +328,7 @@ On first launch, lazy.nvim will auto-install all plugins. Run `:checkhealth` to 
 
 | Shortcut     | Action           | Detail                              |
 |--------------|------------------|-------------------------------------|
-| Space + r    | Run C++          | Saves, compiles with `-g` & runs    |
+| Space + r    | Run C++          | Saves, compiles with `-g` & runs   |
 | Space + p    | Run Python       | Saves & runs with python3           |
 | Esc          | Clear Search     | Remove search highlighting          |
 
@@ -413,7 +440,57 @@ TEXT EDITING
 
 ---
 
-## 🚀 Workflow Guide
+## �️ Foot Terminal Setup
+
+Foot is a lightweight, native Wayland terminal — perfect for low-spec Chromebooks. It renders faster than the default Crostini terminal and supports Nerd Fonts out of the box.
+
+### Foot Config (`~/.config/foot/foot.ini`)
+
+```bash
+mkdir -p ~/.config/foot
+nvim ~/.config/foot/foot.ini
+```
+
+Paste this configuration:
+
+```ini
+# ~/.config/foot/foot.ini
+
+[main]
+font=JetBrainsMono Nerd Font:size=11
+pad=10x10
+
+[colors]
+alpha=0.90
+background=1a1b26
+foreground=c0caf5
+
+## Normal Colors (Tokyo Night)
+regular0=15161e
+regular1=f7768e
+regular2=9ece6a
+regular3=e0af68
+regular4=7aa2f7
+regular5=bb9af7
+regular6=7dcfff
+regular7=a9b1d6
+
+## Bright Colors
+bright0=414868
+bright1=f7768e
+bright2=9ece6a
+bright3=e0af68
+bright4=7aa2f7
+bright5=bb9af7
+bright6=7dcfff
+bright7=c0caf5
+```
+
+Launch Foot from the ChromeOS Launcher (Search Key → type "foot"), then pin it to your shelf.
+
+---
+
+## �🚀 Workflow Guide
 
 ### C++ Development
 
