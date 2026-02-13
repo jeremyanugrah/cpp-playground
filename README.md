@@ -1,5 +1,7 @@
 # 💻 Coding Playground (Chromebook Dev)
 
+> **Last updated:** February 13, 2026
+
 A centralized repository for my Computer Science experiments, algorithms, and daily coding tasks.  
 This environment runs inside a **Debian 12 (Bookworm)** container on a **Lenovo S340 Chromebook**.
 
